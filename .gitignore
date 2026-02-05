@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+coverage/
+# Browser state - NEVER commit session data
+browser-data/
+cookies/
+*.cookies.json
