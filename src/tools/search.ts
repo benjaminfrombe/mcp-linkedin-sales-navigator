@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getNavigator } from "../browser/navigator.js";
+import { ensureNavigator } from "../browser/navigator.js";
 import { SEARCH_SELECTORS, URLS, WAIT_CONDITIONS } from "../browser/selectors.js";
 import {
   queryAll,
@@ -21,7 +21,7 @@ import type { LeadProfile, SearchResult } from "../types/index.js";
  * Parse search results from the current page.
  */
 async function parseSearchResults(): Promise<SearchResult> {
-  const nav = getNavigator();
+  const nav = await ensureNavigator();
   const page = nav.getPage();
 
   // Wait for results to load
@@ -139,7 +139,7 @@ export function registerSearchTools(server: McpServer): void {
     },
     async (params) => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
 
         // Build and navigate to search URL
         const searchUrl = buildSearchUrl(params);

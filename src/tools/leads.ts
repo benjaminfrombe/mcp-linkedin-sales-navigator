@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getNavigator } from "../browser/navigator.js";
+import { ensureNavigator } from "../browser/navigator.js";
 import { PROFILE_SELECTORS, WAIT_CONDITIONS } from "../browser/selectors.js";
 import { queryAll, queryFirst, textOfFirst } from "../browser/query.js";
 import { extractEntryDatesBrowser } from "../browser/dom-extract.js";
@@ -16,7 +16,7 @@ import type { LeadProfile, ExperienceEntry, EducationEntry } from "../types/inde
  * Parse a lead profile from the current page.
  */
 async function parseLeadProfile(): Promise<LeadProfile> {
-  const nav = getNavigator();
+  const nav = await ensureNavigator();
   const page = nav.getPage();
 
   // Wait for profile to load
@@ -110,7 +110,7 @@ export function registerLeadTools(server: McpServer): void {
     },
     async (params) => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
 
         // Navigate to the profile
         await nav.goToProfile(params.profileUrl);
@@ -150,7 +150,7 @@ export function registerLeadTools(server: McpServer): void {
     },
     async (params) => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
         const page = nav.getPage();
 
         // Navigate to the profile

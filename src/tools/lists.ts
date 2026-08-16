@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getNavigator } from "../browser/navigator.js";
+import { ensureNavigator } from "../browser/navigator.js";
 import { LIST_SELECTORS, WAIT_CONDITIONS } from "../browser/selectors.js";
 import { queryAll, queryFirst, textOfFirst } from "../browser/query.js";
 import type { LeadList } from "../types/index.js";
@@ -15,7 +15,7 @@ import type { LeadList } from "../types/index.js";
  * Parse lead lists from the lists page.
  */
 async function parseLeadLists(): Promise<LeadList[]> {
-  const nav = getNavigator();
+  const nav = await ensureNavigator();
   const page = nav.getPage();
 
   await nav.waitForSelector(LIST_SELECTORS.LISTS_CONTAINER, WAIT_CONDITIONS.SEARCH_RESULTS_TIMEOUT);
@@ -53,7 +53,7 @@ export function registerListTools(server: McpServer): void {
     {},
     async () => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
 
         // Navigate to lists page
         await nav.goToLists();
@@ -92,7 +92,7 @@ export function registerListTools(server: McpServer): void {
     },
     async (params) => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
         const page = nav.getPage();
 
         // Navigate to lists page

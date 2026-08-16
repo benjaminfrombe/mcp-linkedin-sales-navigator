@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getNavigator } from "../browser/navigator.js";
+import { ensureNavigator } from "../browser/navigator.js";
 import { INMAIL_SELECTORS, PROFILE_SELECTORS, WAIT_CONDITIONS } from "../browser/selectors.js";
 import { queryFirst } from "../browser/query.js";
 import type { InMailResult } from "../types/index.js";
@@ -38,7 +38,7 @@ export function registerInMailTools(server: McpServer): void {
     },
     async (params) => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
         const page = nav.getPage();
 
         // Navigate to profile

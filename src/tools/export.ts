@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getNavigator } from "../browser/navigator.js";
+import { ensureNavigator } from "../browser/navigator.js";
 import {
   SEARCH_SELECTORS,
   LIST_SELECTORS,
@@ -26,7 +26,7 @@ import type { LeadProfile } from "../types/index.js";
  * Collect leads from the current page (search results or list detail).
  */
 async function collectLeadsFromPage(): Promise<LeadProfile[]> {
-  const nav = getNavigator();
+  const nav = await ensureNavigator();
   const page = nav.getPage();
 
   const resultSelector =
@@ -73,7 +73,7 @@ async function collectLeadsFromPage(): Promise<LeadProfile[]> {
  * Collect leads across multiple pages.
  */
 async function collectLeadsMultiPage(limit: number): Promise<LeadProfile[]> {
-  const nav = getNavigator();
+  const nav = await ensureNavigator();
   const page = nav.getPage();
   const allLeads: LeadProfile[] = [];
 
@@ -170,7 +170,7 @@ export function registerExportTools(server: McpServer): void {
     },
     async (params) => {
       try {
-        const nav = getNavigator();
+        const nav = await ensureNavigator();
         const effectiveLimit = Math.min(params.limit, 250);
 
         if (params.source === "list") {

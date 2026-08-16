@@ -307,6 +307,23 @@ export class SalesNavigator {
  * Singleton instance for the MCP server.
  */
 let navigatorInstance: SalesNavigator | null = null;
+let navigatorReady = false;
+let pendingInit: Promise<SalesNavigator> | null = null;
+let storedConfig: {
+  browser: Partial<BrowserConfig>;
+  auth: AuthConfig;
+} | null = null;
+
+/**
+ * Record the configuration to use for lazy initialization.
+ * Called once at server startup, before any tool runs.
+ */
+export function configureNavigator(
+  browserConfig: Partial<BrowserConfig>,
+  authConfig: AuthConfig
+): void {
+  storedConfig = { browser: browserConfig, auth: authConfig };
+}
 
 export function getNavigator(): SalesNavigator {
   if (!navigatorInstance) {
@@ -315,14 +332,50 @@ export function getNavigator(): SalesNavigator {
   return navigatorInstance;
 }
 
+/**
+ * Get a browser-connected navigator, connecting on first use.
+ *
+ * Startup connection is best-effort: the browser may not be running yet
+ * when the MCP server starts, and a tool call can arrive before the
+ * startup attempt finishes. Without this, every tool failed for the rest
+ * of the process with "Browser not initialized" and never retried - the
+ * lazy path the startup code claimed to have, but did not implement.
+ *
+ * Concurrent callers share a single in-flight attempt; a failed attempt
+ * is not cached, so the next call retries.
+ */
+export async function ensureNavigator(): Promise<SalesNavigator> {
+  if (navigatorInstance && navigatorReady) return navigatorInstance;
+  if (pendingInit) return pendingInit;
+
+  if (!storedConfig) {
+    throw new Error(
+      "Navigator is not configured. configureNavigator() must be called at server startup."
+    );
+  }
+
+  const { browser, auth } = storedConfig;
+  pendingInit = (async () => {
+    const nav = new SalesNavigator(browser);
+    await nav.initialize(auth);
+    navigatorInstance = nav;
+    navigatorReady = true;
+    return nav;
+  })();
+
+  try {
+    return await pendingInit;
+  } finally {
+    pendingInit = null;
+  }
+}
+
 export async function initializeNavigator(
   browserConfig: Partial<BrowserConfig>,
   authConfig: AuthConfig
 ): Promise<SalesNavigator> {
-  const nav = new SalesNavigator(browserConfig);
-  await nav.initialize(authConfig);
-  navigatorInstance = nav;
-  return nav;
+  configureNavigator(browserConfig, authConfig);
+  return ensureNavigator();
 }
 
 export async function closeNavigator(): Promise<void> {
@@ -330,4 +383,5 @@ export async function closeNavigator(): Promise<void> {
     await navigatorInstance.close();
     navigatorInstance = null;
   }
+  navigatorReady = false;
 }
