@@ -20,7 +20,13 @@ async function parseLeadProfile(): Promise<LeadProfile> {
   // Wait for profile to load
   await nav.waitForSelector(PROFILE_SELECTORS.PROFILE_CONTAINER, WAIT_CONDITIONS.PROFILE_LOAD_TIMEOUT);
 
-  const fullName = (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_NAME)) || "Unknown";
+  // Name/headline/location have no stable per-field selector on the
+  // current topcard markup (see issue #2) - extract them together via
+  // the structural DOM heuristic, falling back to the selector-based
+  // path (PROFILE_NAME) only if that heuristic comes up empty.
+  const topcard = await nav.extractTopcardFields();
+  const fullName =
+    topcard.name || (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_NAME)) || "Unknown";
   const nameParts = fullName.split(" ");
 
   // Parse experience
@@ -67,10 +73,17 @@ async function parseLeadProfile(): Promise<LeadProfile> {
     lastName: nameParts.slice(1).join(" ") || "",
     title: (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_TITLE)) || "",
     company: (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_COMPANY)) || "",
-    location: (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_LOCATION)) || "",
-    headline: (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_HEADLINE)) || undefined,
+    location:
+      topcard.location || (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_LOCATION)) || "",
+    headline:
+      topcard.headline ||
+      (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_HEADLINE)) ||
+      undefined,
     summary: (await nav.safeTextContent(PROFILE_SELECTORS.PROFILE_ABOUT)) || undefined,
-    connectionDegree: (await nav.safeTextContent(PROFILE_SELECTORS.CONNECTION_DEGREE)) || undefined,
+    connectionDegree:
+      topcard.connectionDegree ||
+      (await nav.safeTextContent(PROFILE_SELECTORS.CONNECTION_DEGREE)) ||
+      undefined,
     profilePictureUrl: (await nav.safeAttribute(PROFILE_SELECTORS.PROFILE_PHOTO, "src")) || undefined,
     salesNavUrl: page.url(),
     experience,
@@ -144,33 +157,32 @@ export function registerLeadTools(server: McpServer): void {
         await nav.goToProfile(params.profileUrl);
         await nav.humanDelay();
 
-        // Click the save button
+        // Click the save button. Its accessible name flips between
+        // "Save <name> as a lead..." and "Unsave <name>..." once saved,
+        // so check both up front rather than relying on one being absent.
         const saveButton = await page.$(PROFILE_SELECTORS.SAVE_BUTTON);
+        const unsaveButton = await page.$(PROFILE_SELECTORS.UNSAVE_BUTTON);
+        if (unsaveButton) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: JSON.stringify({ success: true, message: "Lead is already saved" }),
+              },
+            ],
+          };
+        }
         if (!saveButton) {
-          // Check if already saved
-          const unsaveButton = await page.$(PROFILE_SELECTORS.UNSAVE_BUTTON);
-          if (unsaveButton) {
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: JSON.stringify({ success: true, message: "Lead is already saved" }),
-                },
-              ],
-            };
-          }
           throw new Error("Save button not found on profile page");
         }
 
-        await saveButton.click();
-        await nav.humanDelay();
+        await nav.clickAndSettle(saveButton, WAIT_CONDITIONS.BUTTON_STATE_SETTLE);
 
         // If a specific list is requested, handle list selection
         if (params.listName) {
           const addToListBtn = await page.$(PROFILE_SELECTORS.ADD_TO_LIST_BUTTON);
           if (addToListBtn) {
-            await addToListBtn.click();
-            await nav.humanDelay();
+            await nav.clickAndSettle(addToListBtn, WAIT_CONDITIONS.BUTTON_STATE_SETTLE);
             // Type list name and select
             // This interaction depends on the list selection UI
           }

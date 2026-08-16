@@ -101,13 +101,12 @@ export function registerListTools(server: McpServer): void {
         await nav.goToLists();
         await nav.humanDelay();
 
-        // Click create list button
+        // Click create list button (opens the "Create lead list" modal)
         const createButton = await page.$(LIST_SELECTORS.CREATE_LIST_BUTTON);
         if (!createButton) {
           throw new Error("Create list button not found");
         }
-        await createButton.click();
-        await nav.humanDelay();
+        await nav.clickAndSettle(createButton);
 
         // Enter list name
         const nameInput = await page.$(LIST_SELECTORS.LIST_NAME_INPUT);
@@ -115,15 +114,27 @@ export function registerListTools(server: McpServer): void {
           throw new Error("List name input not found");
         }
         await nameInput.fill(params.name);
-        await nav.humanDelay();
+        // The modal's "Create" button starts disabled and only enables
+        // once the name field's async validation clears (issue #2:
+        // clicking it immediately after fill() hit it while still
+        // disabled and the click silently did nothing).
+        await nav.getPage().waitForTimeout(WAIT_CONDITIONS.BUTTON_STATE_SETTLE);
 
         // Save list
         const saveButton = await page.$(LIST_SELECTORS.LIST_SAVE_BUTTON);
         if (!saveButton) {
           throw new Error("Save list button not found");
         }
-        await saveButton.click();
-        await nav.humanDelay(1000, 2000);
+        const isDisabled = await saveButton.evaluate(
+          (el) => (el as HTMLButtonElement).disabled
+        );
+        if (isDisabled) {
+          throw new Error(
+            "Create button is still disabled after entering the list name - " +
+              "the name may be empty, too long, or duplicate an existing list."
+          );
+        }
+        await nav.clickAndSettle(saveButton, 1500);
 
         return {
           content: [

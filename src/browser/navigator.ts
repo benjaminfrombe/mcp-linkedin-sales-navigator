@@ -17,6 +17,7 @@ import {
   navigateToSalesNavigator,
 } from "./auth.js";
 import { URLS, WAIT_CONDITIONS } from "./selectors.js";
+import { extractTopcardFieldsBrowser, type TopcardHeuristicResult } from "./dom-extract.js";
 import type { BrowserConfig, AuthConfig } from "../types/index.js";
 import { readFile } from "node:fs/promises";
 
@@ -196,6 +197,35 @@ export class SalesNavigator {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Click a button/element and wait out its async enabled/disabled or
+   * label transition before continuing (see issue #2: several tools
+   * clicked a button while it was still mid-transition and the click
+   * was silently swallowed by LinkedIn's Ember re-render).
+   */
+  async clickAndSettle(
+    handle: { click: () => Promise<void> },
+    settleMs: number = WAIT_CONDITIONS.BUTTON_STATE_SETTLE
+  ): Promise<void> {
+    await handle.click();
+    await this.getPage().waitForTimeout(settleMs);
+  }
+
+  /**
+   * Extract lead topcard fields (name/headline/location/connection
+   * degree) via the structural DOM heuristic in `dom-extract.ts`.
+   *
+   * Use this instead of PROFILE_SELECTORS.PROFILE_HEADLINE/LOCATION,
+   * which have no stable selector on the current lead profile markup.
+   */
+  async extractTopcardFields(): Promise<TopcardHeuristicResult> {
+    try {
+      return await this.getPage().evaluate(extractTopcardFieldsBrowser);
+    } catch {
+      return { name: null, headline: null, location: null, connectionDegree: null };
     }
   }
 

@@ -44,16 +44,17 @@ export function registerInMailTools(server: McpServer): void {
         await nav.goToProfile(params.profileUrl);
         await nav.humanDelay();
 
-        // Click the InMail button
+        // Click the InMail/Message button. Its accessible name reads
+        // "Message <name>" when free-to-contact and mentions "InMail"
+        // when it will consume a credit - SEND_INMAIL_BUTTON matches both.
         const inmailButton = await page.$(PROFILE_SELECTORS.SEND_INMAIL_BUTTON);
         if (!inmailButton) {
           throw new Error(
-            "InMail button not found. The lead may not accept InMails or you may be out of credits."
+            "InMail/Message button not found. The lead may not accept InMails or you may be out of credits."
           );
         }
 
-        await inmailButton.click();
-        await nav.humanDelay();
+        await nav.clickAndSettle(inmailButton);
 
         // Wait for compose modal
         const modalAppeared = await nav.waitForSelector(
@@ -100,7 +101,7 @@ export function registerInMailTools(server: McpServer): void {
           throw new Error("Send button not found in compose modal");
         }
 
-        await sendButton.click();
+        await nav.clickAndSettle(sendButton, 1500);
         await nav.humanDelay(1000, 2000);
 
         // Check for success or error
