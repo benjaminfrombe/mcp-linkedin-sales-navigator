@@ -120,3 +120,28 @@ export function extractTopcardFieldsBrowser(): TopcardHeuristicResult {
 
   return { name, headline, location, connectionDegree };
 }
+
+/**
+ * Find the date range ("Aug 2008–Present", "2001–2004", ...) inside a
+ * single experience or education entry.
+ *
+ * The date span carries a fully random per-instance class name and no
+ * `data-anonymize` marker, so there is no selector to target it with.
+ * We identify it by content instead: the shortest leaf element in the
+ * entry containing a 4-digit year.
+ *
+ * Runs in the browser via `elementHandle.evaluate(extractEntryDatesBrowser)`.
+ */
+export function extractEntryDatesBrowser(entry: Element): string | null {
+  const candidates = Array.from(entry.querySelectorAll("*")).filter(
+    (el) => el.children.length === 0 && /\b\d{4}\b/.test(el.textContent || "")
+  );
+  if (candidates.length === 0) return null;
+
+  // Prefer the most specific (shortest) match - a parent block would
+  // otherwise drag in surrounding prose.
+  candidates.sort(
+    (a, b) => (a.textContent || "").trim().length - (b.textContent || "").trim().length
+  );
+  return candidates[0].textContent?.trim() || null;
+}

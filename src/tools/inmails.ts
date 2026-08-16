@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getNavigator } from "../browser/navigator.js";
 import { INMAIL_SELECTORS, PROFILE_SELECTORS, WAIT_CONDITIONS } from "../browser/selectors.js";
+import { queryFirst } from "../browser/query.js";
 import type { InMailResult } from "../types/index.js";
 
 /**
@@ -47,7 +48,7 @@ export function registerInMailTools(server: McpServer): void {
         // Click the InMail/Message button. Its accessible name reads
         // "Message <name>" when free-to-contact and mentions "InMail"
         // when it will consume a credit - SEND_INMAIL_BUTTON matches both.
-        const inmailButton = await page.$(PROFILE_SELECTORS.SEND_INMAIL_BUTTON);
+        const inmailButton = await queryFirst(page, PROFILE_SELECTORS.SEND_INMAIL_BUTTON);
         if (!inmailButton) {
           throw new Error(
             "InMail/Message button not found. The lead may not accept InMails or you may be out of credits."
@@ -66,14 +67,14 @@ export function registerInMailTools(server: McpServer): void {
         }
 
         // Fill in subject
-        const subjectInput = await page.$(INMAIL_SELECTORS.SUBJECT_INPUT);
+        const subjectInput = await queryFirst(page, INMAIL_SELECTORS.SUBJECT_INPUT);
         if (subjectInput) {
           await subjectInput.fill(params.subject);
           await nav.humanDelay(200, 500);
         }
 
         // Fill in body
-        const bodyInput = await page.$(INMAIL_SELECTORS.BODY_INPUT);
+        const bodyInput = await queryFirst(page, INMAIL_SELECTORS.BODY_INPUT);
         if (bodyInput) {
           await bodyInput.fill(params.body);
           await nav.humanDelay(300, 700);
@@ -96,7 +97,7 @@ export function registerInMailTools(server: McpServer): void {
         }
 
         // Send the InMail
-        const sendButton = await page.$(INMAIL_SELECTORS.SEND_BUTTON);
+        const sendButton = await queryFirst(page, INMAIL_SELECTORS.SEND_BUTTON);
         if (!sendButton) {
           throw new Error("Send button not found in compose modal");
         }
@@ -105,8 +106,8 @@ export function registerInMailTools(server: McpServer): void {
         await nav.humanDelay(1000, 2000);
 
         // Check for success or error
-        const successEl = await page.$(INMAIL_SELECTORS.SEND_SUCCESS);
-        const errorEl = await page.$(INMAIL_SELECTORS.SEND_ERROR);
+        const successEl = await queryFirst(page, INMAIL_SELECTORS.SEND_SUCCESS);
+        const errorEl = await queryFirst(page, INMAIL_SELECTORS.SEND_ERROR);
 
         if (errorEl) {
           const errorText = await errorEl.textContent();

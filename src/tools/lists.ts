@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getNavigator } from "../browser/navigator.js";
 import { LIST_SELECTORS, WAIT_CONDITIONS } from "../browser/selectors.js";
+import { queryAll, queryFirst, textOfFirst } from "../browser/query.js";
 import type { LeadList } from "../types/index.js";
 
 /**
@@ -19,16 +20,13 @@ async function parseLeadLists(): Promise<LeadList[]> {
 
   await nav.waitForSelector(LIST_SELECTORS.LISTS_CONTAINER, WAIT_CONDITIONS.SEARCH_RESULTS_TIMEOUT);
 
-  const listElements = await page.$$(LIST_SELECTORS.LIST_ITEM);
+  const listElements = await queryAll(page, LIST_SELECTORS.LIST_ITEM);
   const lists: LeadList[] = [];
 
   for (const listEl of listElements) {
     try {
-      const nameEl = await listEl.$(LIST_SELECTORS.LIST_NAME);
-      const countEl = await listEl.$(LIST_SELECTORS.LIST_COUNT);
-
-      const name = (await nameEl?.textContent())?.trim() || "Unnamed List";
-      const countText = (await countEl?.textContent())?.trim() || "0";
+      const name = (await textOfFirst(listEl, LIST_SELECTORS.LIST_NAME)) || "Unnamed List";
+      const countText = (await textOfFirst(listEl, LIST_SELECTORS.LIST_COUNT)) || "0";
       const leadCount = parseInt(countText.replace(/[^0-9]/g, ""), 10) || 0;
 
       // Extract list ID from link or data attribute
@@ -102,14 +100,14 @@ export function registerListTools(server: McpServer): void {
         await nav.humanDelay();
 
         // Click create list button (opens the "Create lead list" modal)
-        const createButton = await page.$(LIST_SELECTORS.CREATE_LIST_BUTTON);
+        const createButton = await queryFirst(page, LIST_SELECTORS.CREATE_LIST_BUTTON);
         if (!createButton) {
           throw new Error("Create list button not found");
         }
         await nav.clickAndSettle(createButton);
 
         // Enter list name
-        const nameInput = await page.$(LIST_SELECTORS.LIST_NAME_INPUT);
+        const nameInput = await queryFirst(page, LIST_SELECTORS.LIST_NAME_INPUT);
         if (!nameInput) {
           throw new Error("List name input not found");
         }
@@ -121,7 +119,7 @@ export function registerListTools(server: McpServer): void {
         await nav.getPage().waitForTimeout(WAIT_CONDITIONS.BUTTON_STATE_SETTLE);
 
         // Save list
-        const saveButton = await page.$(LIST_SELECTORS.LIST_SAVE_BUTTON);
+        const saveButton = await queryFirst(page, LIST_SELECTORS.LIST_SAVE_BUTTON);
         if (!saveButton) {
           throw new Error("Save list button not found");
         }

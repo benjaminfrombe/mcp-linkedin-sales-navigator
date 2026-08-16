@@ -18,6 +18,7 @@ import {
 } from "./auth.js";
 import { URLS, WAIT_CONDITIONS } from "./selectors.js";
 import { extractTopcardFieldsBrowser, type TopcardHeuristicResult } from "./dom-extract.js";
+import { anyOf, queryFirst, textOfFirst, type SelectorList } from "./query.js";
 import type { BrowserConfig, AuthConfig } from "../types/index.js";
 import { readFile } from "node:fs/promises";
 
@@ -26,6 +27,12 @@ export class SalesNavigator {
   private context: BrowserContext | null = null;
   private page: Page | null = null;
   private config: BrowserConfig;
+  /**
+   * True when we attached to a browser we don't own (CDP). We must then
+   * only *detach* on close - closing the page/context/browser would
+   * destroy the user's own browser session and tabs (see issue #2).
+   */
+  private isAttachedSession = false;
 
   constructor(config: Partial<BrowserConfig> = {}) {
     this.config = {
@@ -43,8 +50,10 @@ export class SalesNavigator {
    */
   async initialize(authConfig: AuthConfig): Promise<void> {
     if (authConfig.method === "cdp" && authConfig.cdpEndpoint) {
-      // Connect to an existing browser via CDP
+      // Connect to an existing browser via CDP. This browser belongs to
+      // the user, not to us - never close it (see `close()`).
       this.browser = await chromium.connectOverCDP(authConfig.cdpEndpoint);
+      this.isAttachedSession = true;
       const contexts = this.browser.contexts();
       this.context = contexts[0] || (await this.browser.newContext());
     } else if (authConfig.method === "session" && authConfig.userDataDir) {
@@ -153,14 +162,13 @@ export class SalesNavigator {
 
   /**
    * Safely extract text content from an element.
+   *
+   * Accepts a prioritised selector list, resolved in order (see
+   * `query.ts` for why a comma-separated CSS list cannot express that).
    */
-  async safeTextContent(selector: string): Promise<string | null> {
+  async safeTextContent(selectors: SelectorList): Promise<string | null> {
     try {
-      const page = this.getPage();
-      const element = await page.$(selector);
-      if (!element) return null;
-      const text = await element.textContent();
-      return text?.trim() || null;
+      return await textOfFirst(this.getPage(), selectors);
     } catch {
       return null;
     }
@@ -170,28 +178,29 @@ export class SalesNavigator {
    * Safely extract an attribute from an element.
    */
   async safeAttribute(
-    selector: string,
+    selectors: SelectorList,
     attribute: string
   ): Promise<string | null> {
     try {
-      const page = this.getPage();
-      const element = await page.$(selector);
+      const element = await queryFirst(this.getPage(), selectors);
       if (!element) return null;
-      return element.getAttribute(attribute);
+      return await element.getAttribute(attribute);
     } catch {
       return null;
     }
   }
 
   /**
-   * Wait for a selector to appear on the page.
+   * Wait for any of the given selectors to appear on the page.
+   * Priority is irrelevant when only existence matters, so this can use
+   * a single combined selector.
    */
   async waitForSelector(
-    selector: string,
+    selectors: SelectorList,
     timeout?: number
   ): Promise<boolean> {
     try {
-      await this.getPage().waitForSelector(selector, {
+      await this.getPage().waitForSelector(anyOf(selectors), {
         timeout: timeout || this.config.actionTimeout,
       });
       return true;
@@ -262,6 +271,20 @@ export class SalesNavigator {
    */
   async close(): Promise<void> {
     try {
+      if (this.isAttachedSession) {
+        // CDP: the browser, its context and its tabs belong to the user.
+        // Closing any of them would kill their real browsing session
+        // (issue #2) - just drop our references and disconnect the
+        // Playwright client.
+        this.page = null;
+        this.context = null;
+        if (this.browser) {
+          await this.browser.close().catch(() => {});
+          this.browser = null;
+        }
+        return;
+      }
+
       if (this.page) {
         await this.page.close().catch(() => {});
         this.page = null;

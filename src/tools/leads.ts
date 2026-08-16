@@ -8,6 +8,8 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getNavigator } from "../browser/navigator.js";
 import { PROFILE_SELECTORS, WAIT_CONDITIONS } from "../browser/selectors.js";
+import { queryAll, queryFirst, textOfFirst } from "../browser/query.js";
+import { extractEntryDatesBrowser } from "../browser/dom-extract.js";
 import type { LeadProfile, ExperienceEntry, EducationEntry } from "../types/index.js";
 
 /**
@@ -31,37 +33,35 @@ async function parseLeadProfile(): Promise<LeadProfile> {
 
   // Parse experience
   const experience: ExperienceEntry[] = [];
-  const expElements = await page.$$(PROFILE_SELECTORS.EXPERIENCE_ITEM);
+  const expElements = await queryAll(page, PROFILE_SELECTORS.EXPERIENCE_ITEM);
   for (const exp of expElements) {
-    const title = (await exp.$(PROFILE_SELECTORS.EXPERIENCE_TITLE))
-      ? (await (await exp.$(PROFILE_SELECTORS.EXPERIENCE_TITLE))?.textContent())?.trim() || ""
-      : "";
-    const company = (await exp.$(PROFILE_SELECTORS.EXPERIENCE_COMPANY))
-      ? (await (await exp.$(PROFILE_SELECTORS.EXPERIENCE_COMPANY))?.textContent())?.trim() || ""
-      : "";
-    const dates = (await exp.$(PROFILE_SELECTORS.EXPERIENCE_DATES))
-      ? (await (await exp.$(PROFILE_SELECTORS.EXPERIENCE_DATES))?.textContent())?.trim() || ""
-      : "";
+    const title = (await textOfFirst(exp, PROFILE_SELECTORS.EXPERIENCE_TITLE)) || "";
+    const company = (await textOfFirst(exp, PROFILE_SELECTORS.EXPERIENCE_COMPANY)) || "";
+    // The date range has no selectable hook in the current markup, so
+    // fall back to finding it by content within this entry.
+    const dates =
+      (await textOfFirst(exp, PROFILE_SELECTORS.EXPERIENCE_DATES)) ||
+      (await exp.evaluate(extractEntryDatesBrowser).catch(() => null)) ||
+      "";
+
+    // LinkedIn separates the range with an en dash (–), not a hyphen.
+    const [startDate, endDate] = dates.split("–").map((part) => part.trim());
 
     experience.push({
       title,
       company,
       isCurrent: dates.toLowerCase().includes("present"),
-      startDate: dates.split("–")[0]?.trim(),
-      endDate: dates.split("–")[1]?.trim(),
+      startDate,
+      endDate,
     });
   }
 
   // Parse education
   const education: EducationEntry[] = [];
-  const eduElements = await page.$$(PROFILE_SELECTORS.EDUCATION_ITEM);
+  const eduElements = await queryAll(page, PROFILE_SELECTORS.EDUCATION_ITEM);
   for (const edu of eduElements) {
-    const school = (await edu.$(PROFILE_SELECTORS.EDUCATION_SCHOOL))
-      ? (await (await edu.$(PROFILE_SELECTORS.EDUCATION_SCHOOL))?.textContent())?.trim() || ""
-      : "";
-    const degree = (await edu.$(PROFILE_SELECTORS.EDUCATION_DEGREE))
-      ? (await (await edu.$(PROFILE_SELECTORS.EDUCATION_DEGREE))?.textContent())?.trim() || ""
-      : "";
+    const school = (await textOfFirst(edu, PROFILE_SELECTORS.EDUCATION_SCHOOL)) || "";
+    const degree = (await textOfFirst(edu, PROFILE_SELECTORS.EDUCATION_DEGREE)) || "";
 
     education.push({ school, degree });
   }
@@ -160,8 +160,8 @@ export function registerLeadTools(server: McpServer): void {
         // Click the save button. Its accessible name flips between
         // "Save <name> as a lead..." and "Unsave <name>..." once saved,
         // so check both up front rather than relying on one being absent.
-        const saveButton = await page.$(PROFILE_SELECTORS.SAVE_BUTTON);
-        const unsaveButton = await page.$(PROFILE_SELECTORS.UNSAVE_BUTTON);
+        const saveButton = await queryFirst(page, PROFILE_SELECTORS.SAVE_BUTTON);
+        const unsaveButton = await queryFirst(page, PROFILE_SELECTORS.UNSAVE_BUTTON);
         if (unsaveButton) {
           return {
             content: [
@@ -180,7 +180,7 @@ export function registerLeadTools(server: McpServer): void {
 
         // If a specific list is requested, handle list selection
         if (params.listName) {
-          const addToListBtn = await page.$(PROFILE_SELECTORS.ADD_TO_LIST_BUTTON);
+          const addToListBtn = await queryFirst(page, PROFILE_SELECTORS.ADD_TO_LIST_BUTTON);
           if (addToListBtn) {
             await nav.clickAndSettle(addToListBtn, WAIT_CONDITIONS.BUTTON_STATE_SETTLE);
             // Type list name and select

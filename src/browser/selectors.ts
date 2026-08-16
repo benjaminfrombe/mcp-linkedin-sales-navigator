@@ -95,10 +95,13 @@ export const SEARCH_SELECTORS = {
    * `data-anonymize`, so we no longer depend on the entity-lockup's own
    * (also hashed-per-field-only-when-unlucky) CSS classes for those.
    */
-  RESULTS_CONTAINER: "ol.artdeco-list, .search-results__result-list",
-  RESULT_ITEM: "li.artdeco-list__item, li.search-results__result-item",
-  RESULT_NAME:
-    '[data-anonymize="person-name"], .artdeco-entity-lockup__title a, .result-lockup__name a',
+  RESULTS_CONTAINER: ["ol.artdeco-list", ".search-results__result-list"],
+  RESULT_ITEM: ["li.artdeco-list__item", "li.search-results__result-item"],
+  RESULT_NAME: [
+    '[data-anonymize="person-name"]',
+    ".artdeco-entity-lockup__title a",
+    ".result-lockup__name a",
+  ],
   /**
    * NOTE: on search result rows `data-anonymize="job-title"` is *not*
    * the job title - it holds "X years in role / Y years in company"
@@ -106,14 +109,28 @@ export const SEARCH_SELECTORS = {
    * (confirmed 2026-08; inconsistent with the lead profile page, where
    * `job-title` *is* correct - see PROFILE_TITLE below). Falls back to
    * the free-text blurb when the lead has no structured position.
+   *
+   * `.artdeco-entity-lockup__subtitle` is an *ancestor* of the title and
+   * also contains the company name, so it must stay strictly last and be
+   * resolved in order (see `query.ts`).
    */
-  RESULT_TITLE:
-    '[data-anonymize="title"], [data-anonymize="person-blurb"], .artdeco-entity-lockup__subtitle, .result-lockup__highlight-keyword',
-  RESULT_COMPANY:
-    '[data-anonymize="company-name"], .artdeco-entity-lockup__subtitle a, .result-lockup__position-company a',
-  RESULT_LOCATION:
-    '[data-anonymize="location"], .artdeco-entity-lockup__caption, .result-lockup__misc-item',
-  RESULT_LINK: ".artdeco-entity-lockup__title a, .result-lockup__name a",
+  RESULT_TITLE: [
+    '[data-anonymize="title"]',
+    '[data-anonymize="person-blurb"]',
+    ".result-lockup__highlight-keyword",
+    ".artdeco-entity-lockup__subtitle",
+  ],
+  RESULT_COMPANY: [
+    '[data-anonymize="company-name"]',
+    ".artdeco-entity-lockup__subtitle a",
+    ".result-lockup__position-company a",
+  ],
+  RESULT_LOCATION: [
+    '[data-anonymize="location"]',
+    ".artdeco-entity-lockup__caption",
+    ".result-lockup__misc-item",
+  ],
+  RESULT_LINK: [".artdeco-entity-lockup__title a", ".result-lockup__name a"],
 
   /** Save/message buttons on a search result row. */
   RESULT_SAVE_BUTTON: '[data-x--save-menu-trigger], button[aria-label^="Save "]',
@@ -138,19 +155,34 @@ export const PROFILE_SELECTORS = {
    * is LinkedIn's own internal view-tracking hook - both confirmed
    * stable 2026-08, unlike the CSS-module `_card_<hash>` class next to them.
    */
-  PROFILE_CONTAINER:
-    '#profile-card-section, [data-sn-view-name="feature-lead-top-card"], .profile-topcard',
+  PROFILE_CONTAINER: [
+    "#profile-card-section",
+    '[data-sn-view-name="feature-lead-top-card"]',
+    ".profile-topcard",
+  ],
   /** `h1` is a11y-only page-title text ("Sales Navigator Lead Page") unless it also carries this attribute. */
-  PROFILE_NAME:
-    'h1[data-x--lead--name], [data-anonymize="person-name"], .profile-topcard-person-entity__name',
-  PROFILE_TITLE: '[data-anonymize="job-title"], .profile-topcard__summary-position',
-  PROFILE_COMPANY: '[data-anonymize="company-name"], .profile-topcard__summary-company',
+  PROFILE_NAME: [
+    "h1[data-x--lead--name]",
+    '[data-anonymize="person-name"]',
+    ".profile-topcard-person-entity__name",
+  ],
+  PROFILE_TITLE: ['[data-anonymize="job-title"]', ".profile-topcard__summary-position"],
+  PROFILE_COMPANY: ['[data-anonymize="company-name"]', ".profile-topcard__summary-company"],
   /** Not present as data-anonymize on the topcard itself (only in side panels) - see dom-extract.ts fallback. */
-  PROFILE_LOCATION: '[data-anonymize="location"], .profile-topcard__summary-location',
-  PROFILE_HEADLINE:
-    '[data-x--lead-profile-card--headline], [data-anonymize="headline"], .profile-topcard__headline',
-  PROFILE_ABOUT: '[data-sn-view-name="feature-about-lead"] p, .profile-topcard__summary-content',
-  PROFILE_PHOTO: 'img[data-anonymize="headshot-photo"], .profile-topcard-person-entity__image img',
+  PROFILE_LOCATION: ['[data-anonymize="location"]', ".profile-topcard__summary-location"],
+  PROFILE_HEADLINE: [
+    "[data-x--lead-profile-card--headline]",
+    '[data-anonymize="headline"]',
+    ".profile-topcard__headline",
+  ],
+  PROFILE_ABOUT: [
+    '[data-sn-view-name="feature-about-lead"] p',
+    ".profile-topcard__summary-content",
+  ],
+  PROFILE_PHOTO: [
+    'img[data-anonymize="headshot-photo"]',
+    ".profile-topcard-person-entity__image img",
+  ],
 
   /** Connection info */
   CONNECTION_DEGREE: ".profile-topcard__connection-degree",
@@ -161,13 +193,23 @@ export const PROFILE_SELECTORS = {
    * the `data-action` attributes that have been removed from the
    * current markup entirely.
    */
-  SAVE_BUTTON: '[data-x--lead-save-cta], [data-x--save-menu-trigger], button[aria-label^="Save "]',
-  UNSAVE_BUTTON: 'button[aria-label^="Unsave "], button[aria-label^="Remove "]',
+  SAVE_BUTTON: [
+    "[data-x--lead-save-cta]",
+    "[data-x--save-menu-trigger]",
+    'button[aria-label^="Save "]',
+  ],
+  UNSAVE_BUTTON: ['button[aria-label^="Unsave "]', 'button[aria-label^="Remove "]'],
   /** "Message" wording when free-to-contact, "InMail" when it will consume a credit - match either. */
-  SEND_INMAIL_BUTTON:
-    'button[aria-label^="Message "], button[aria-label*="InMail" i], button:has-text("Message")',
-  ADD_TO_LIST_BUTTON:
-    '[data-x--lead-save-cta], [data-x--save-menu-trigger], button:has-text("Save to list")',
+  SEND_INMAIL_BUTTON: [
+    'button[aria-label^="Message "]',
+    'button[aria-label*="InMail" i]',
+    'button:has-text("Message")',
+  ],
+  ADD_TO_LIST_BUTTON: [
+    "[data-x--lead-save-cta]",
+    "[data-x--save-menu-trigger]",
+    'button:has-text("Save to list")',
+  ],
 
   /**
    * Experience section. Each entry is an `<li>` with a fully random
@@ -175,47 +217,60 @@ export const PROFILE_SELECTORS = {
    * CSS modules) - scoped via Playwright's `:has()` on the
    * `data-anonymize="job-title"` anchor instead of the `<li>`'s own class.
    */
-  EXPERIENCE_SECTION:
-    '[data-sn-view-name="feature-lead-experience"], [data-x--lead--experience-section], .profile-experience',
-  EXPERIENCE_ITEM:
-    '[data-sn-view-name="feature-lead-experience"] li:has([data-anonymize="job-title"]), .profile-experience__card',
-  EXPERIENCE_TITLE: '[data-anonymize="job-title"], .profile-experience__title',
-  EXPERIENCE_COMPANY: '[data-anonymize="company-name"], .profile-experience__company',
+  EXPERIENCE_SECTION: [
+    '[data-sn-view-name="feature-lead-experience"]',
+    "[data-x--lead--experience-section]",
+    ".profile-experience",
+  ],
+  EXPERIENCE_ITEM: [
+    '[data-sn-view-name="feature-lead-experience"] li:has([data-anonymize="job-title"])',
+    ".profile-experience__card",
+  ],
+  EXPERIENCE_TITLE: ['[data-anonymize="job-title"]', ".profile-experience__title"],
+  EXPERIENCE_COMPANY: ['[data-anonymize="company-name"]', ".profile-experience__company"],
   /**
-   * Rendered as a single "<start>–<end>" span with a fully random
-   * per-instance class and no `data-anonymize` marker. Matched by
-   * content instead, via Playwright's `:text-matches()` pseudo-class
-   * (a 4-digit year is present in every locale LinkedIn renders this in).
+   * Date ranges are rendered as a single "<start>–<end>" span with a
+   * fully random per-instance class and no `data-anonymize` marker, so
+   * there is nothing to select on. `extractEntryDatesBrowser()` in
+   * `dom-extract.ts` finds them by content (a 4-digit year) instead;
+   * this selector only covers the legacy markup.
    */
-  EXPERIENCE_DATES: 'span:text-matches("\\d{4}"), time, .profile-experience__dates',
+  EXPERIENCE_DATES: [".profile-experience__dates", "time"],
 
   /** Education section - same random-per-instance `<li>` class situation as experience. */
-  EDUCATION_SECTION: '[data-sn-view-name="feature-lead-education"], .profile-education',
-  EDUCATION_ITEM:
-    '[data-sn-view-name="feature-lead-education"] li:has([data-anonymize="education-name"]), .profile-education__card',
-  EDUCATION_SCHOOL: '[data-anonymize="education-name"], .profile-education__school',
+  EDUCATION_SECTION: ['[data-sn-view-name="feature-lead-education"]', ".profile-education"],
+  EDUCATION_ITEM: [
+    '[data-sn-view-name="feature-lead-education"] li:has([data-anonymize="education-name"])',
+    ".profile-education__card",
+  ],
+  EDUCATION_SCHOOL: ['[data-anonymize="education-name"]', ".profile-education__school"],
   /**
    * No `data-anonymize` marker exists for degree at all - it's the
-   * first plain `<span>` sibling after the school name within the
-   * same entry. Best-effort; falls back to empty string if the DOM
-   * shape changes (see `tools/leads.ts`, which treats a missing match
-   * as absent data rather than throwing).
+   * first plain `<span>` inside the entry, after the school link.
+   * Best-effort; a missing match is treated as absent data rather than
+   * an error (see `tools/leads.ts`).
    */
-  EDUCATION_DEGREE: "span, .profile-education__degree",
+  EDUCATION_DEGREE: [".profile-education__degree", "span"],
 } as const;
 
 export const LIST_SELECTORS = {
   /** Lead lists page */
-  LISTS_CONTAINER: '[data-sn-view-name="lead-list-hub"], .lists-container',
-  LIST_ITEM: '[data-x--list-hub--row], .lists-nav__list-item',
-  LIST_NAME: '[data-x--list-hub--list-name], .lists-nav__list-name',
-  LIST_COUNT: "td.list-hub__leads-count-cell, .lists-nav__list-count",
-  CREATE_LIST_BUTTON:
-    '[data-x--list-nav--create-list-dropdown-trigger], button:has-text("Create lead list"), button[data-action="create-list"]',
-  /** Scoped to the "Create lead list" modal at the call site - both the name input and the (separate) description textarea match `data-x--text-input-field`, so callers select the first match. */
-  LIST_NAME_INPUT: '[data-x--text-input-field], input[data-action="list-name"]',
-  LIST_SAVE_BUTTON:
-    '[data-x--lists--create-modal-save-button], button:has-text("Create"), button[data-action="save-list"]',
+  LISTS_CONTAINER: ['[data-sn-view-name="lead-list-hub"]', ".lists-container"],
+  LIST_ITEM: ["[data-x--list-hub--row]", ".lists-nav__list-item"],
+  LIST_NAME: ["[data-x--list-hub--list-name]", ".lists-nav__list-name"],
+  /** The saved-lead count cell of a list-hub row (confirmed 2026-08). */
+  LIST_COUNT: ["td.list-hub__saved-entities--width", ".lists-nav__list-count"],
+  CREATE_LIST_BUTTON: [
+    "[data-x--list-nav--create-list-dropdown-trigger]",
+    'button[data-action="create-list"]',
+    'button:has-text("Create lead list")',
+  ],
+  LIST_NAME_INPUT: ["[data-x--text-input-field]", 'input[data-action="list-name"]'],
+  LIST_SAVE_BUTTON: [
+    "[data-x--lists--create-modal-save-button]",
+    'button[data-action="save-list"]',
+    'button:has-text("Create")',
+  ],
 
   /** List detail view */
   LIST_LEADS: ".list-detail__results",
@@ -224,15 +279,23 @@ export const LIST_SELECTORS = {
 
 export const INMAIL_SELECTORS = {
   /** InMail/message compose modal. `data-x-conversation-widget="compose-form"` confirmed 2026-08. */
-  COMPOSE_MODAL: '[data-x-conversation-widget="compose-form"], .compose-form',
-  SUBJECT_INPUT: '[aria-label="Subject (required)"], input[name="subject"]',
-  BODY_INPUT:
-    '[aria-label^="Type your message"], textarea[name="body"], .compose-form__message-field',
-  SEND_BUTTON:
-    '[data-x-conversation-widget="compose-form"] button:has-text("Send"), .compose-form button:has-text("Send")',
+  COMPOSE_MODAL: ['[data-x-conversation-widget="compose-form"]', ".compose-form"],
+  SUBJECT_INPUT: ['[aria-label="Subject (required)"]', 'input[name="subject"]'],
+  BODY_INPUT: [
+    '[aria-label^="Type your message"]',
+    'textarea[name="body"]',
+    ".compose-form__message-field",
+  ],
+  SEND_BUTTON: [
+    '[data-x-conversation-widget="compose-form"] button:has-text("Send")',
+    '.compose-form button:has-text("Send")',
+  ],
   /** `data-control-name="overlay.close_overlay"` is a long-standing LinkedIn-wide tracking attribute, not Sales-Nav-specific. */
-  CANCEL_BUTTON:
-    '[data-control-name="overlay.close_overlay"], button:has-text("Cancel"), button[data-action="cancel"]',
+  CANCEL_BUTTON: [
+    '[data-control-name="overlay.close_overlay"]',
+    'button[data-action="cancel"]',
+    'button:has-text("Cancel")',
+  ],
 
   /** InMail credits */
   CREDITS_INDICATOR: ".inmail-credits-indicator",
