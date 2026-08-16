@@ -105,9 +105,17 @@ export function registerInMailTools(server: McpServer): void {
         await nav.clickAndSettle(sendButton, 1500);
         await nav.humanDelay(1000, 2000);
 
-        // Check for success or error
+        // Primary success signal: the compose form closes once the
+        // message is away. This is far more reliable than looking for
+        // an error element, because the compose panel also renders
+        // unrelated notices (e.g. the CRM "you are disconnected"
+        // alert) that are present whether or not the send succeeded.
+        const composeGone = !(await queryFirst(page, INMAIL_SELECTORS.COMPOSE_MODAL));
+
         const successEl = await queryFirst(page, INMAIL_SELECTORS.SEND_SUCCESS);
-        const errorEl = await queryFirst(page, INMAIL_SELECTORS.SEND_ERROR);
+        const errorEl = composeGone
+          ? null
+          : await queryFirst(page, INMAIL_SELECTORS.SEND_ERROR);
 
         if (errorEl) {
           const errorText = await errorEl.textContent();
@@ -126,12 +134,14 @@ export function registerInMailTools(server: McpServer): void {
           };
         }
 
-        // Check remaining credits
+        // Check remaining credits. The label reads "InMail credits: N left",
+        // so pull the number out rather than parsing from the start.
         const creditsText = await nav.safeTextContent(INMAIL_SELECTORS.CREDITS_COUNT);
-        const remainingCredits = creditsText ? parseInt(creditsText, 10) : undefined;
+        const creditsMatch = creditsText?.match(/InMail credits:\s*(\d+)/i) ?? creditsText?.match(/\d+/);
+        const remainingCredits = creditsMatch ? parseInt(creditsMatch[creditsMatch.length - 1], 10) : undefined;
 
         const result: InMailResult = {
-          success: !!successEl || !errorEl,
+          success: composeGone || !!successEl || !errorEl,
           remainingCredits,
         };
 

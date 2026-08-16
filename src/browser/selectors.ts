@@ -297,13 +297,34 @@ export const INMAIL_SELECTORS = {
     'button:has-text("Cancel")',
   ],
 
-  /** InMail credits */
+  /**
+   * InMail credits. Rendered as plain text ("InMail credits: 149 left")
+   * in the Sales Navigator inbox header, with no dedicated class, so
+   * it is matched on content rather than by selector.
+   */
   CREDITS_INDICATOR: ".inmail-credits-indicator",
-  CREDITS_COUNT: ".inmail-credits-indicator__count",
+  CREDITS_COUNT: [
+    '*:text-matches("InMail credits:\\\\s*\\\\d+")',
+    ".inmail-credits-indicator__count",
+  ],
 
-  /** Confirmation */
+  /**
+   * Confirmation.
+   *
+   * Do NOT use a bare `[role="alert"]` here. The compose panel
+   * permanently renders a CRM notice ("Unable to log because you are
+   * disconnected. Connect to CRM") with that role, entirely unrelated
+   * to sending. Treating it as a send error reported successfully
+   * delivered InMails as failures.
+   *
+   * Send success is therefore determined by the compose form closing
+   * (see `tools/inmails.ts`), not by hunting for an error element.
+   */
   SEND_SUCCESS: ".compose-form__success",
-  SEND_ERROR: '[role="alert"], .compose-form__error',
+  SEND_ERROR: [
+    '[data-x-conversation-widget="compose-form"] .compose-form__error',
+    ".compose-form .compose-form__error",
+  ],
 } as const;
 
 /**
